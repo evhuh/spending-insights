@@ -154,7 +154,7 @@ describe.skipIf(!dbAvailable)("POST /api/upload", () => {
     ]);
 
     // Amounts are positive decimals; raw descriptions are NOT stored (no column).
-    expect(stored.map((t) => t.amount.toString())).toEqual([
+    expect(stored.map((t) => t.amount.toFixed(2))).toEqual([
       "12.66",
       "28.41",
       "19.92",
