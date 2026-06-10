@@ -1,31 +1,15 @@
 import { prisma } from "@/lib/prisma";
-import { monthRange, serializeTransaction } from "@/lib/transactions";
-
-import type { Prisma } from "@/lib/generated/prisma/client";
+import { serializeTransaction, transactionWhereFromParams } from "@/lib/transactions";
 
 export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url);
-  const where: Prisma.TransactionWhereInput = {};
-
-  const month = searchParams.get("month");
-  if (month !== null) {
-    const range = monthRange(month);
-    if (range === null) {
-      return Response.json({ error: "month must be YYYY-MM" }, { status: 400 });
-    }
-    where.date = range;
-  }
-  const category = searchParams.get("category");
-  if (category !== null) {
-    where.category = { equals: category, mode: "insensitive" };
-  }
-  const merchant = searchParams.get("merchant");
-  if (merchant !== null) {
-    where.merchant = { equals: merchant, mode: "insensitive" };
+  const filter = transactionWhereFromParams(searchParams);
+  if (!filter.ok) {
+    return Response.json({ error: filter.error }, { status: 400 });
   }
 
   const transactions = await prisma.transaction.findMany({
-    where,
+    where: filter.where,
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   });
   return Response.json({ transactions: transactions.map(serializeTransaction) });

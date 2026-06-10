@@ -1,6 +1,6 @@
 // Shared shapes/helpers for the transactions API routes.
 
-import type { Transaction } from "@/lib/generated/prisma/client";
+import type { Prisma, Transaction } from "@/lib/generated/prisma/client";
 
 // Spec invariant 4: everything else (id, import_batch_id, created_at,
 // updated_at, category_source) is non-editable and must be rejected.
@@ -90,6 +90,33 @@ export function validateEdit(body: unknown): EditValidation {
   }
 
   return { ok: true, data, categoryProvided: "category" in fields };
+}
+
+export type WhereFromParams =
+  | { ok: true; where: Prisma.TransactionWhereInput }
+  | { ok: false; error: string };
+
+/** Build the month/category/merchant filter shared by /api/transactions and
+ * /api/analytics. */
+export function transactionWhereFromParams(searchParams: URLSearchParams): WhereFromParams {
+  const where: Prisma.TransactionWhereInput = {};
+  const month = searchParams.get("month");
+  if (month !== null) {
+    const range = monthRange(month);
+    if (range === null) {
+      return { ok: false, error: "month must be YYYY-MM" };
+    }
+    where.date = range;
+  }
+  const category = searchParams.get("category");
+  if (category !== null) {
+    where.category = { equals: category, mode: "insensitive" };
+  }
+  const merchant = searchParams.get("merchant");
+  if (merchant !== null) {
+    where.merchant = { equals: merchant, mode: "insensitive" };
+  }
+  return { ok: true, where };
 }
 
 /** [start, end) date range for a YYYY-MM month filter, or null if malformed. */
