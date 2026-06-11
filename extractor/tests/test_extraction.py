@@ -75,3 +75,11 @@ def test_statement_totals_captured(layout):
     assert layout.statement_totals["payments"] == Decimal("-1250.00")
     purchase_sum = sum(r.amount for r in layout.rows if r.section == "purchases")
     assert purchase_sum == layout.statement_totals["purchases"]
+
+
+def test_interest_lines_after_purchases_subtotal_are_excluded(layout):
+    # The interest row sits in no recognized section (the purchases section is
+    # closed by its own subtotal), and the interest TOTAL must not overwrite
+    # the purchases statement total.
+    assert all("INTEREST" not in r.description for r in layout.rows)
+    assert set(layout.statement_totals) == {"payments", "purchases"}

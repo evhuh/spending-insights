@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from decimal import Decimal
 from typing import Any, Protocol
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.extraction import RawRow, Section
 
@@ -41,6 +41,14 @@ class StandardizedRow(BaseModel):
     merchant: str
     transaction_date_mmdd: str
     amount: Decimal
+
+    @field_validator("amount", mode="before")
+    @classmethod
+    def _clean_amount(cls, value: object) -> object:
+        # Models sometimes echo "$1,250.00" despite instructions.
+        if isinstance(value, str):
+            return value.replace("$", "").replace(",", "").strip()
+        return value
 
 
 class ParsedRow(BaseModel):
@@ -86,8 +94,16 @@ class OpenAIMerchantNamer:
                 {"role": "user", "content": json.dumps(payload)},
             ],
         )
-        data = json.loads(response.choices[0].message.content)
-        return [StandardizedRow.model_validate(item) for item in data["rows"]]
+        content = response.choices[0].message.content
+        try:
+            data = json.loads(content)
+        except json.JSONDecodeError as error:
+            raise ValueError(f"AI returned non-JSON content: {content[:200]!r}") from error
+        # Expected {"rows": [...]}, but tolerate a bare top-level array.
+        items = data.get("rows") if isinstance(data, dict) else data
+        if not isinstance(items, list):
+            raise ValueError(f"AI response missing 'rows' list: {content[:200]!r}")
+        return [StandardizedRow.model_validate(item) for item in items]
 
 
 def parse_rows(rows: Sequence[RawRow], namer: MerchantNamer) -> list[ParsedRow]:

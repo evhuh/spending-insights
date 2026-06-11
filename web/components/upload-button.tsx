@@ -49,7 +49,7 @@ export function UploadButton({ onUploaded }: { onUploaded: () => void }) {
       <button
         type="button"
         disabled={busy}
-        className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-800 disabled:opacity-50"
+        className="rounded-lg bg-blush-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blush-800 disabled:opacity-50"
         onClick={() => inputRef.current?.click()}
       >
         {busy ? "Importing…" : "Upload statement"}

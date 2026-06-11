@@ -32,7 +32,7 @@ export function EditableCell({
       <button
         type="button"
         aria-label={`Edit ${label}`}
-        className={`w-full rounded px-1 py-0.5 text-${align} hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-600/40`}
+        className={`w-full rounded px-1 py-0.5 text-${align} hover:bg-blush-100/40 focus:outline-none focus:ring-2 focus:ring-blush-600/40`}
         onClick={() => {
           setDraft(value);
           setEditing(true);
@@ -58,7 +58,7 @@ export function EditableCell({
       step={type === "number" ? "0.01" : undefined}
       list={listId}
       value={draft}
-      className={`w-full rounded border border-teal-600 bg-white px-1 py-0.5 text-${align} outline-none`}
+      className={`w-full rounded border border-blush-600 bg-white px-1 py-0.5 text-${align} outline-none`}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => void commit()}
       onKeyDown={(e) => {

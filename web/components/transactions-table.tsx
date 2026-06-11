@@ -9,8 +9,8 @@ import {
 } from "@tanstack/react-table";
 import { useMemo } from "react";
 
+import { CategoryPicker } from "@/components/category-picker";
 import { EditableCell } from "@/components/editable-cell";
-import { CATEGORIES } from "@/lib/openai";
 import { formatDate, formatUsd } from "@/lib/format";
 import type { TransactionJson } from "@/lib/transactions";
 
@@ -18,11 +18,13 @@ const columnHelper = createColumnHelper<TransactionJson>();
 
 export function TransactionsTable({
   transactions,
-  categoryColors,
+  colorFor,
+  onSetColor,
   onEdit,
 }: {
   transactions: TransactionJson[];
-  categoryColors: Map<string, string>;
+  colorFor: (category: string) => string;
+  onSetColor: (category: string, color: string) => void;
   onEdit: (id: string, field: string, value: unknown) => Promise<boolean>;
 }) {
   const columns = useMemo(
@@ -53,22 +55,11 @@ export function TransactionsTable({
         columnHelper.accessor("category", {
           header: "Category",
           cell: ({ row }) => (
-            <EditableCell
+            <CategoryPicker
               value={row.original.category}
-              listId="category-options"
-              label={`category for ${row.original.merchant}`}
-              display={
-                <span className="inline-flex items-center gap-1.5">
-                  <span
-                    aria-hidden
-                    className="h-2 w-2 rounded-full"
-                    style={{
-                      backgroundColor: categoryColors.get(row.original.category) ?? "#d6d3d1",
-                    }}
-                  />
-                  {row.original.category}
-                </span>
-              }
+              merchant={row.original.merchant}
+              colorFor={colorFor}
+              onSetColor={onSetColor}
               onCommit={(v) => onEdit(row.original.id, "category", v)}
             />
           ),
@@ -99,7 +90,7 @@ export function TransactionsTable({
           ),
         }),
       ] as ColumnDef<TransactionJson>[],
-    [onEdit, categoryColors]
+    [onEdit, colorFor, onSetColor]
   );
 
   const table = useReactTable({
@@ -112,44 +103,41 @@ export function TransactionsTable({
   return (
     <section
       aria-label="Transactions"
-      className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm"
+      className="overflow-hidden rounded-2xl border border-cream-200 bg-white shadow-sm"
     >
-      <datalist id="category-options">
-        {CATEGORIES.map((category) => (
-          <option key={category} value={category} />
-        ))}
-      </datalist>
-      <table className="w-full text-sm">
-        <thead className="bg-stone-50 text-left text-xs font-semibold uppercase tracking-wider text-stone-500">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th key={header.id} className="px-4 py-3">
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody className="divide-y divide-stone-100">
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="hover:bg-stone-50/60">
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-3 py-1.5">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+      <div className="max-h-[calc(100dvh-23rem)] min-h-72 overflow-y-auto">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 z-10 bg-cream-100 text-left text-xs font-semibold uppercase tracking-wider text-stone-500">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <th key={header.id} className="px-4 py-3">
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody className="divide-y divide-stone-100">
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.id} className="hover:bg-cream-100/50">
+                {row.getVisibleCells().map((cell) => (
+                  <td key={cell.id} className="px-3 py-1.5">
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {transactions.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-10 text-center text-stone-400">
+                  No transactions — upload a statement to get started.
                 </td>
-              ))}
-            </tr>
-          ))}
-          {transactions.length === 0 && (
-            <tr>
-              <td colSpan={5} className="px-4 py-10 text-center text-stone-400">
-                No transactions — upload a statement to get started.
-              </td>
-            </tr>
+              </tr>
           )}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

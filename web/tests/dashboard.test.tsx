@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -88,22 +88,30 @@ function installFetchMock() {
       if (method === "POST" && url === "/api/merchant-rules") {
         return jsonResponse({ rule: body }, 201);
       }
+      if (method === "POST" && url === "/api/reports") {
+        return jsonResponse({ action: "created", report: {} });
+      }
       throw new Error(`unmocked fetch: ${method} ${url}`);
     })
   );
 }
 
-beforeEach(installFetchMock);
+beforeEach(() => {
+  window.localStorage.clear();
+  installFetchMock();
+});
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Dashboard", () => {
   it("renders metrics, chart legend, and transaction rows from the APIs", async () => {
     render(<Dashboard />);
 
-    // Metric cards
-    expect(await screen.findAllByText("$41.07")).not.toHaveLength(0);
-    expect(screen.getByText("Total Spend")).toBeInTheDocument();
-    expect(screen.getByText("$1.37")).toBeInTheDocument();
+    // Summary card: total spend + top 3 merchants in one container
+    await screen.findAllByText("$41.07");
+    const summary = screen.getByRole("region", { name: "Summary" });
+    expect(within(summary).getByText("Total Spend")).toBeInTheDocument();
+    expect(within(summary).getByText("$41.07")).toBeInTheDocument();
+    expect(within(summary).getByText("Nice Day Chinese")).toBeInTheDocument();
 
     // Pie chart card renders with its legend
     const chart = screen.getByRole("region", { name: "Spending by category" });
@@ -191,5 +199,72 @@ describe("Dashboard", () => {
     expect(
       screen.queryByRole("dialog", { name: "Apply category to future transactions" })
     ).not.toBeInTheDocument();
+  });
+
+  it("syncs a monthly report to Notion from the header control", async () => {
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await screen.findAllByText("Chick-fil-A");
+
+    fireEvent.change(screen.getByLabelText("Report month"), {
+      target: { value: "2026-04" },
+    });
+    await user.click(screen.getByRole("button", { name: "Sync to Notion" }));
+
+    const post = fetchCalls.find((c) => c.method === "POST" && c.url === "/api/reports");
+    expect(post).toBeDefined();
+    expect(post!.body).toEqual({ month: "2026-04" });
+    expect(await screen.findByText("Notion row created for 2026-04.")).toBeInTheDocument();
+  });
+
+  it("lists categories alphabetically with Other last", async () => {
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await screen.findAllByText("Chick-fil-A");
+
+    await user.click(screen.getByRole("button", { name: "Edit category for Chick-fil-A" }));
+    const listbox = screen.getByRole("listbox", { name: "Categories" });
+    const optionNames = within(listbox)
+      .getAllByRole("button")
+      .map((b) => b.textContent)
+      .filter((t): t is string => !!t && !t.startsWith("Edit color"));
+
+    expect(optionNames).toEqual([
+      "Dining",
+      "Education",
+      "Entertainment",
+      "Groceries",
+      "Health",
+      "Rent",
+      "Services",
+      "Shopping",
+      "Transport",
+      "Travel",
+      "Utilities",
+      "Other",
+    ]);
+  });
+
+  it("applies a category color only on Save", async () => {
+    const user = userEvent.setup();
+    render(<Dashboard />);
+    await screen.findAllByText("Chick-fil-A");
+
+    await user.click(screen.getByRole("button", { name: "Edit category for Chick-fil-A" }));
+    const listbox = screen.getByRole("listbox", { name: "Categories" });
+    await user.click(within(listbox).getByRole("button", { name: "Edit color for Dining" }));
+
+    fireEvent.change(screen.getByLabelText("Color value for Dining"), {
+      target: { value: "#ff0000" },
+    });
+    // Sliding the picker alone must NOT persist anything.
+    expect(window.localStorage.getItem("spending-insights.categoryColors")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(
+      JSON.parse(window.localStorage.getItem("spending-insights.categoryColors")!)
+    ).toMatchObject({ Dining: "#ff0000" });
+    // The editor closed after saving.
+    expect(screen.queryByLabelText("Color value for Dining")).not.toBeInTheDocument();
   });
 });

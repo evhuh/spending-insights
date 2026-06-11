@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #faf9f7;
-  --foreground: #1c1917;
+  /* Warm cream-white page background, per the pastel palette */
+  --background: #fdf8ec;
+  --foreground: #2a211c;
+}
+
+/* Theme palette: cream → peach → blush (from the reference swatches),
+   plus darker blush tones for interactive elements that need contrast. */
+@theme {
+  --color-cream-50: #fdf8ec;
+  --color-cream-100: #faf0ce;
+  --color-cream-200: #f0e2b8;
+  --color-peach-100: #f9dfd2;
+  --color-blush-100: #f5cbd3;
+  --color-blush-200: #f2bacd;
+  --color-blush-600: #c96d8c;
+  --color-blush-700: #b35273;
+  --color-blush-800: #98405f;
 }
 
 @theme inline {
@@ -19,6 +34,6 @@ body {
 }
 
 ::selection {
-  background: #0f766e;
+  background: #b35273;
   color: #ffffff;
 }

@@ -7,24 +7,24 @@ import { formatUsd } from "@/lib/format";
 
 export function CategoryPie({
   data,
-  colors,
+  colorFor,
 }: {
   data: CategorySpend[];
-  colors: Map<string, string>;
+  colorFor: (category: string) => string;
 }) {
   const total = data.reduce((sum, d) => sum + d.total, 0);
 
   return (
     <section
       aria-label="Spending by category"
-      className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
+      className="rounded-2xl border border-cream-200 bg-white p-5 shadow-sm"
     >
       <h2 className="text-sm font-semibold text-stone-900">Spending by category</h2>
       {data.length === 0 ? (
         <p className="mt-4 text-sm text-stone-400">Nothing to chart yet.</p>
       ) : (
         <>
-          <div className="mt-2 h-56" data-testid="category-pie-chart">
+          <div className="mt-2 h-48" data-testid="category-pie-chart">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -37,7 +37,7 @@ export function CategoryPie({
                   strokeWidth={0}
                 >
                   {data.map((entry) => (
-                    <Cell key={entry.category} fill={colors.get(entry.category)} />
+                    <Cell key={entry.category} fill={colorFor(entry.category)} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value) => formatUsd(Number(value))} />
@@ -50,7 +50,7 @@ export function CategoryPie({
                 <span
                   aria-hidden
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: colors.get(entry.category) }}
+                  style={{ backgroundColor: colorFor(entry.category) }}
                 />
                 <span className="flex-1 truncate text-stone-700">{entry.category}</span>
                 <span className="tabular-nums font-medium text-stone-900">

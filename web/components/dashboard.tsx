@@ -4,12 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CategoryPie } from "@/components/category-pie";
 import { FilterBar, type Filters } from "@/components/filter-bar";
-import { MetricCards } from "@/components/metric-cards";
+import { ReportSync } from "@/components/report-sync";
+import { SummaryCard } from "@/components/summary-card";
 import { RulePrompt } from "@/components/rule-prompt";
 import { TransactionsTable } from "@/components/transactions-table";
 import { UploadButton } from "@/components/upload-button";
 import type { Analytics } from "@/lib/analytics";
-import { CHART_COLORS } from "@/lib/format";
+import { useCategoryColors } from "@/lib/category-colors";
+import { sortCategoriesOtherLast } from "@/lib/openai";
 import type { TransactionJson } from "@/lib/transactions";
 
 const EMPTY_FILTERS: Filters = { month: "", category: "", merchant: "" };
@@ -56,13 +58,7 @@ export function Dashboard() {
     void load(filters);
   }, [filters, load]);
 
-  const categoryColors = useMemo(() => {
-    const map = new Map<string, string>();
-    analytics?.spendByCategory.forEach(({ category }, index) => {
-      map.set(category, CHART_COLORS[index % CHART_COLORS.length]);
-    });
-    return map;
-  }, [analytics]);
+  const { colorFor, setColor } = useCategoryColors();
 
   const handleEdit = useCallback(
     async (id: string, field: string, value: unknown): Promise<boolean> => {
@@ -116,22 +112,22 @@ export function Dashboard() {
   }, [rulePrompt]);
 
   const categories = useMemo(
-    () => [...new Set(transactions.map((t) => t.category))].sort(),
+    () => sortCategoriesOtherLast(transactions.map((t) => t.category)),
     [transactions]
   );
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-6">
+      <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">
-            Finance Intelligence
-          </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-stone-900">
-            Spending Insights
+            spending insights
           </h1>
         </div>
-        <UploadButton onUploaded={() => void load(filters)} />
+        <div className="flex flex-col items-end gap-3">
+          <UploadButton onUploaded={() => void load(filters)} />
+          <ReportSync />
+        </div>
       </header>
 
       {error && (
@@ -145,15 +141,16 @@ export function Dashboard() {
 
       <FilterBar filters={filters} categories={categories} onChange={setFilters} />
 
-      {analytics && <MetricCards analytics={analytics} />}
+      {analytics && <SummaryCard analytics={analytics} />}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_3fr]">
+      <div className="mt-5 grid items-start gap-6 lg:grid-cols-[2fr_3fr]">
         {analytics && (
-          <CategoryPie data={analytics.spendByCategory} colors={categoryColors} />
+          <CategoryPie data={analytics.spendByCategory} colorFor={colorFor} />
         )}
         <TransactionsTable
           transactions={transactions}
-          categoryColors={categoryColors}
+          colorFor={colorFor}
+          onSetColor={setColor}
           onEdit={handleEdit}
         />
       </div>

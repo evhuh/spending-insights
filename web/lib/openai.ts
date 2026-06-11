@@ -14,10 +14,21 @@ export const CATEGORIES = [
   "Health",
   "Services",
   "Education",
+  "Utilities",
+  "Rent",
   "Other",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];
+
+/** Alphabetical, with "Other" pinned last (kept only if present). */
+export function sortCategoriesOtherLast(categories: Iterable<string>): string[] {
+  const unique = [...new Set(categories)];
+  return unique
+    .filter((category) => category !== "Other")
+    .sort((a, b) => a.localeCompare(b))
+    .concat(unique.includes("Other") ? ["Other"] : []);
+}
 
 export interface Categorizer {
   /** Returns a category for each input merchant, keyed by merchant name. */

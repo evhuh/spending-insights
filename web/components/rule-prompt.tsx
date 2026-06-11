@@ -17,7 +17,7 @@ export function RulePrompt({
         role="dialog"
         aria-modal="true"
         aria-label="Apply category to future transactions"
-        className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 shadow-xl"
+        className="w-full max-w-md rounded-2xl border border-cream-200 bg-white p-6 shadow-xl"
       >
         <h2 className="text-base font-semibold text-stone-900">Remember this category?</h2>
         <p className="mt-2 text-sm text-stone-600">
@@ -28,14 +28,14 @@ export function RulePrompt({
         <div className="mt-5 flex justify-end gap-3">
           <button
             type="button"
-            className="rounded-lg px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-100"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-stone-600 hover:bg-cream-100"
             onClick={onDecline}
           >
             Just this once
           </button>
           <button
             type="button"
-            className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
+            className="rounded-lg bg-blush-700 px-4 py-2 text-sm font-medium text-white hover:bg-blush-800"
             onClick={onAccept}
           >
             Apply to future

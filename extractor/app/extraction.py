@@ -71,6 +71,7 @@ def extract_layout(pdf_bytes: bytes) -> LayoutExtraction:
         closing_date = _find_closing_date(full_text)
 
         in_transactions = False
+        header_starts: dict[str, float] = {}
         bands: list[tuple[str, float]] | None = None
         section: Section | None = None
 
@@ -83,7 +84,14 @@ def extract_layout(pdf_bytes: bytes) -> LayoutExtraction:
                     continue
 
                 if bands is None:
-                    bands = _header_bands(line)
+                    # Column headers are stacked across two lines on the real
+                    # statement ("Transaction/Posting/Reference/Account" above
+                    # "Date/Date/Description/Number/Number/Amount/Total"), so
+                    # accumulate anchors over consecutive lines until all seven
+                    # columns are placed.
+                    _collect_header_starts(line, header_starts)
+                    if len(header_starts) == len(HEADER_TOKEN_TO_COLUMN):
+                        bands = sorted(header_starts.items(), key=lambda item: item[1])
                     continue
 
                 normalized = text.strip().lower()
@@ -92,10 +100,17 @@ def extract_layout(pdf_bytes: bytes) -> LayoutExtraction:
                     continue
 
                 cells = _assign_to_bands(line, bands)
-                subtotal = _read_subtotal(text, cells)
-                if subtotal is not None:
-                    if section is not None:
-                        statement_totals[section] = subtotal
+                upper = text.lstrip().upper()
+                if upper.startswith("TOTAL") or _parse_amount(cells.get("total", "")):
+                    # Subtotal-ish line: record the section's statement total
+                    # (its own "TOTAL ... FOR THIS PERIOD" line) and close the
+                    # section, so later interest/fee totals and rows in
+                    # unrecognized sections can't be misattributed.
+                    if section is not None and "FOR THIS PERIOD" in upper:
+                        value = _first_amount(cells, ("total", "amount"))
+                        if value is not None:
+                            statement_totals[section] = value
+                        section = None
                     continue
 
                 row = _read_transaction_row(cells, section)
@@ -115,16 +130,12 @@ def _lines(page: pdfplumber.page.Page) -> list[list[dict]]:
     return [sorted(ws, key=lambda w: w["x0"]) for _, ws in sorted(grouped.items())]
 
 
-def _header_bands(line: list[dict]) -> list[tuple[str, float]] | None:
-    """From the column-header line, map each column to its starting x position."""
-    starts: dict[str, float] = {}
+def _collect_header_starts(line: list[dict], starts: dict[str, float]) -> None:
+    """Record each column-header token's x position (first occurrence wins)."""
     for word in line:
         column = HEADER_TOKEN_TO_COLUMN.get(word["text"])
         if column is not None and column not in starts:
             starts[column] = word["x0"]
-    if len(starts) < len(HEADER_TOKEN_TO_COLUMN):
-        return None  # not the header line; keep looking
-    return sorted(starts.items(), key=lambda item: item[1])
 
 
 def _assign_to_bands(line: list[dict], bands: list[tuple[str, float]]) -> dict[str, str]:
@@ -139,19 +150,20 @@ def _assign_to_bands(line: list[dict], bands: list[tuple[str, float]]) -> dict[s
     return {column: " ".join(words) for column, words in cells.items()}
 
 
-def _read_subtotal(text: str, cells: dict[str, str]) -> Decimal | None:
-    """Subtotal lines have the `Total` column populated (and shout TOTAL ...)."""
-    total = _parse_amount(cells.get("total", ""))
-    if total is not None:
-        return total
-    if text.lstrip().upper().startswith("TOTAL"):
-        return Decimal("0")  # subtotal line whose amount we failed to read
+def _first_amount(cells: dict[str, str], columns: tuple[str, ...]) -> Decimal | None:
+    """First parseable amount among the given bands (right-aligned values can
+    start left of their column header). Safe even when the account band is
+    listed: the card's last-four has no decimal point and never parses."""
+    for column in columns:
+        value = _parse_amount(cells.get(column, ""))
+        if value is not None:
+            return value
     return None
 
 
 def _read_transaction_row(cells: dict[str, str], section: Section | None) -> RawRow | None:
     tdate = cells.get("transaction_date", "")
-    amount = _parse_amount(cells.get("amount", ""))
+    amount = _first_amount(cells, ("amount", "account"))
     description = cells.get("description", "")
     if section is None or amount is None or not MMDD_RE.match(tdate) or not description:
         return None

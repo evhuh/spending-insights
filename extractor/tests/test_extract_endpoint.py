@@ -82,3 +82,18 @@ def test_no_file_is_written(client, monkeypatch, tmp_path):
 
     assert response.status_code == 200
     assert list(tmp_path.iterdir()) == []
+
+
+def test_namer_failure_returns_502_with_cause(client):
+    class ExplodingNamer:
+        def standardize(self, rows):
+            raise RuntimeError("OpenAI quota exceeded")
+
+    app.dependency_overrides[get_merchant_namer] = ExplodingNamer
+    try:
+        response = _post_fixture(client)
+    finally:
+        app.dependency_overrides[get_merchant_namer] = FakeNamer
+
+    assert response.status_code == 502
+    assert "OpenAI quota exceeded" in response.json()["detail"]

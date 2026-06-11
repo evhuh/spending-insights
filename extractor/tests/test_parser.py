@@ -118,3 +118,43 @@ def test_openai_namer_parses_mocked_response():
     assert captured["model"] == "test-model"
     # The raw description is sent to the model for standardization.
     assert "SQ *NICE DAY CHINESE" in captured["messages"][1]["content"]
+
+
+def test_standardized_row_cleans_dollar_amounts():
+    row = StandardizedRow(
+        merchant="Payment", transaction_date_mmdd="04/28", amount="-$1,250.00"
+    )
+    assert row.amount == Decimal("-1250.00")
+
+
+def test_openai_namer_tolerates_bare_array_response():
+    def create(**kwargs):
+        content = json.dumps(
+            [{"merchant": "Chick-fil-A", "transaction_date_mmdd": "04/22", "amount": "$12.66"}]
+        )
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
+        )
+
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=create))
+    )
+    results = OpenAIMerchantNamer(client=fake_client).standardize(
+        [_row("CHICK-FIL-A #03663 NORTH HAVEN CT", "12.66")]
+    )
+    assert results[0].amount == Decimal("12.66")
+
+
+def test_openai_namer_raises_clear_error_on_garbage():
+    def create(**kwargs):
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content="oops not json"))]
+        )
+
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=create))
+    )
+    with pytest.raises(ValueError, match="non-JSON"):
+        OpenAIMerchantNamer(client=fake_client).standardize(
+            [_row("CHICK-FIL-A #03663 NORTH HAVEN CT", "12.66")]
+        )
