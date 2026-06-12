@@ -42,7 +42,7 @@ ruff, [uv](https://docs.astral.sh/uv/).
 - **Editable dashboard.** TanStack Table with click-to-edit cells, category color theming, filterable donut chart of spending by category, top-merchant summary.
 - **Notion sync.** Monthly spending reports (totals + category breakdown) are upserted into a Notion database via the REST API.
 - **Privacy by construction.** The uploaded PDF exists only as bytes in memory for the lifetime of one request — there is no file to delete because none is written.
-- **Tested at the boundaries.** 56 web tests (Vitest + React Testing Library) and a pytest suite for the extractor; OpenAI, Notion, and the cross-service HTTP call are all mocked, and DB tests run against a dedicated test database.
+- **Tested at the boundaries.** 93 web tests (Vitest + React Testing Library) and a pytest suite for the extractor; OpenAI, Notion, and the cross-service HTTP call are all mocked, and DB tests run against a dedicated test database.
 
 ## High-Level Architecture
 
