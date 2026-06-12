@@ -8,10 +8,6 @@ sync to Notion.
 Built as a privacy-conscious, two-runtime system: statements are
 parsed entirely in memory and never touch disk.
 
-Also because I actually need this.
-
-![Dashboard overview](docs-assets/dashboard.png)
-
 Upload:
 
 [![Upload](https://img.youtube.com/vi/4fBEtElVgI8/hqdefault.jpg)](https://youtu.be/4fBEtElVgI8)
@@ -20,6 +16,15 @@ Notion Sync:
 
 [![Upload](https://img.youtube.com/vi/KjUiX5hXd0s/hqdefault.jpg)](https://youtu.be/KjUiX5hXd0s)
 
+
+## Engineering approach
+
+Designed and architected end to end — the system boundaries
+(TypeScript app + Python extraction service), the data contracts, the
+classification flow, and product decisions like gating insight generation so it
+never silently re-runs. The build was decomposed into verifiable phases captured
+in [`CLAUDE.md`](./CLAUDE.md) and the planning doc
+[`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md); AI assistance under those specs and with my review, with each phase gated on its own tests before the next began.
 
 
 ## Stack
