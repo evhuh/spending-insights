@@ -2,6 +2,8 @@
 // All stored transactions are spending (positive amounts) by invariant 2, so
 // every metric here is spending-only by construction.
 
+import { createHash } from "node:crypto";
+
 export interface AnalyticsTransaction {
   date: Date;
   merchant: string;
@@ -75,6 +77,99 @@ export function computeAnalytics(
     spendByCategory,
     topMerchants,
   };
+}
+
+export interface MomChange {
+  category: string;
+  changePct: number;
+}
+
+/**
+ * Aggregated month payload sent to the LLM for insights (CLAUDE.md §9: only
+ * aggregates, never raw transactions) and fingerprinted for staleness.
+ */
+export interface InsightsPayload {
+  month: string; // YYYY-MM
+  totalSpend: number;
+  topCategories: { category: string; amount: number }[];
+  topMerchants: { merchant: string; amount: number }[];
+  momChanges: MomChange[];
+}
+
+export const TOP_CATEGORIES_LIMIT = 5;
+
+/**
+ * Per-category month-over-month change %, relative to the prior month.
+ * Only categories with prior-month spend have a defined baseline: a category
+ * that disappeared is -100; a category new this month is omitted. No prior
+ * month at all → empty list. Sorted by category for determinism.
+ */
+export function computeMomChanges(
+  current: AnalyticsTransaction[],
+  prior: AnalyticsTransaction[]
+): MomChange[] {
+  const currentCents = centsByCategory(current);
+  const priorCents = centsByCategory(prior);
+
+  return [...priorCents.entries()]
+    .map(([category, priorTotal]) => ({
+      category,
+      changePct: Math.round(
+        (((currentCents.get(category) ?? 0) - priorTotal) / priorTotal) * 100
+      ),
+    }))
+    .sort((a, b) => a.category.localeCompare(b.category));
+}
+
+function centsByCategory(transactions: AnalyticsTransaction[]): Map<string, number> {
+  const byCategory = new Map<string, number>();
+  for (const t of transactions) {
+    byCategory.set(t.category, (byCategory.get(t.category) ?? 0) + toCents(t.amount));
+  }
+  return byCategory;
+}
+
+/** Canonical analytics payload for a month (see InsightsPayload). */
+export function buildInsightsPayload(
+  month: string,
+  currentMonthTransactions: AnalyticsTransaction[],
+  priorMonthTransactions: AnalyticsTransaction[]
+): InsightsPayload {
+  const analytics = computeAnalytics(currentMonthTransactions, { month });
+  return {
+    month,
+    totalSpend: analytics.totalSpend,
+    topCategories: analytics.spendByCategory
+      .slice(0, TOP_CATEGORIES_LIMIT)
+      .map(({ category, total }) => ({ category, amount: total })),
+    topMerchants: analytics.topMerchants.map(({ merchant, total }) => ({
+      merchant,
+      amount: total,
+    })),
+    momChanges: computeMomChanges(currentMonthTransactions, priorMonthTransactions),
+  };
+}
+
+/**
+ * Deterministic fingerprint of the payload: sha-256 over canonical JSON
+ * (recursively sorted keys), so identical analytics always hash identically
+ * and any data change flips the hash. Used for staleness detection.
+ */
+export function fingerprintAnalytics(payload: InsightsPayload): string {
+  return createHash("sha256").update(canonicalJson(payload)).digest("hex");
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(",")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, inner]) => `${JSON.stringify(key)}:${canonicalJson(inner)}`);
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 function spanDays(transactions: AnalyticsTransaction[], month?: string): number {

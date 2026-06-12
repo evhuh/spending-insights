@@ -20,15 +20,24 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "NOTION_DATABASE_ID is not set" }, { status: 500 });
   }
 
-  const rows = await prisma.transaction.findMany({
-    where: { date: monthRange(month)! },
-    select: { date: true, merchant: true, category: true, amount: true },
-  });
+  const [rows, storedInsights] = await Promise.all([
+    prisma.transaction.findMany({
+      where: { date: monthRange(month)! },
+      select: { date: true, merchant: true, category: true, amount: true },
+    }),
+    // Reuse-only (CLAUDE.md §9): the report renders the stored insights
+    // verbatim or omits the section; it never triggers generation.
+    prisma.monthlyInsight.findUnique({ where: { month } }),
+  ]);
   const analytics = computeAnalytics(
     rows.map((row) => ({ ...row, amount: Number(row.amount) })),
     { month }
   );
-  const report = buildMonthlyReport(month, analytics);
+  const report = buildMonthlyReport(
+    month,
+    analytics,
+    storedInsights === null ? null : (storedInsights.insights as string[])
+  );
 
   try {
     const result = await syncMonthlyReport(createNotionApi(), databaseId, report);

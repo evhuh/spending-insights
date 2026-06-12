@@ -1,9 +1,20 @@
 "use client";
 
+export type Granularity = "month" | "year";
+
 export interface Filters {
-  month: string;
+  granularity: Granularity;
+  period: string; // YYYY-MM when granularity is "month", YYYY when "year"
   category: string;
   merchant: string;
+}
+
+/** Current period for a granularity — used as the default and on view switch. */
+export function currentPeriod(granularity: Granularity): string {
+  const now = new Date();
+  return granularity === "year"
+    ? String(now.getUTCFullYear())
+    : now.toISOString().slice(0, 7);
 }
 
 const inputClass =
@@ -22,14 +33,56 @@ export function FilterBar({
   return (
     <div className="mb-4 flex flex-wrap items-end gap-4">
       <label className="flex flex-col gap-1 text-xs font-medium text-stone-500">
-        Month
-        <input
-          type="month"
+        View
+        <select
           className={inputClass}
-          value={filters.month}
-          onChange={(e) => onChange({ ...filters, month: e.target.value })}
-        />
+          value={filters.granularity}
+          onChange={(e) => {
+            const granularity = e.target.value as Granularity;
+            // Always keep a concrete period — there is no all-time view.
+            onChange({ ...filters, granularity, period: currentPeriod(granularity) });
+          }}
+        >
+          <option value="month">Month</option>
+          <option value="year">Year</option>
+        </select>
       </label>
+
+      {filters.granularity === "month" ? (
+        <label className="flex flex-col gap-1 text-xs font-medium text-stone-500">
+          Month
+          <input
+            type="month"
+            className={inputClass}
+            value={filters.period}
+            onChange={(e) =>
+              onChange({
+                ...filters,
+                period: e.target.value || currentPeriod("month"),
+              })
+            }
+          />
+        </label>
+      ) : (
+        <label className="flex flex-col gap-1 text-xs font-medium text-stone-500">
+          Year
+          <input
+            type="number"
+            min={2000}
+            max={2100}
+            step={1}
+            className={`${inputClass} w-28`}
+            value={filters.period}
+            onChange={(e) =>
+              onChange({
+                ...filters,
+                period: e.target.value || currentPeriod("year"),
+              })
+            }
+          />
+        </label>
+      )}
+
       <label className="flex flex-col gap-1 text-xs font-medium text-stone-500">
         Category
         <select
@@ -55,11 +108,11 @@ export function FilterBar({
           onChange={(e) => onChange({ ...filters, merchant: e.target.value })}
         />
       </label>
-      {(filters.month || filters.category || filters.merchant) && (
+      {(filters.category || filters.merchant) && (
         <button
           type="button"
           className="rounded-lg px-3 py-1.5 text-sm font-medium text-blush-700 hover:bg-blush-100/40"
-          onClick={() => onChange({ month: "", category: "", merchant: "" })}
+          onClick={() => onChange({ ...filters, category: "", merchant: "" })}
         >
           Clear filters
         </button>

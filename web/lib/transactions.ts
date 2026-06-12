@@ -101,10 +101,17 @@ export type WhereFromParams =
 export function transactionWhereFromParams(searchParams: URLSearchParams): WhereFromParams {
   const where: Prisma.TransactionWhereInput = {};
   const month = searchParams.get("month");
+  const year = searchParams.get("year");
   if (month !== null) {
     const range = monthRange(month);
     if (range === null) {
       return { ok: false, error: "month must be YYYY-MM" };
+    }
+    where.date = range;
+  } else if (year !== null) {
+    const range = yearRange(year);
+    if (range === null) {
+      return { ok: false, error: "year must be YYYY" };
     }
     where.date = range;
   }
@@ -129,5 +136,15 @@ export function monthRange(month: string): { gte: Date; lt: Date } | null {
   return {
     gte: new Date(Date.UTC(year, monthIndex, 1)),
     lt: new Date(Date.UTC(year, monthIndex + 1, 1)),
+  };
+}
+
+/** [start, end) date range for a YYYY year filter, or null if malformed. */
+export function yearRange(year: string): { gte: Date; lt: Date } | null {
+  if (!/^\d{4}$/.test(year)) return null;
+  const y = Number(year);
+  return {
+    gte: new Date(Date.UTC(y, 0, 1)),
+    lt: new Date(Date.UTC(y + 1, 0, 1)),
   };
 }

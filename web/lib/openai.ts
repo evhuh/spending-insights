@@ -41,6 +41,42 @@ ${CATEGORIES.join(", ")}.
 Respond with JSON: {"categories": {"<merchant>": "<category>", ...}} containing
 every input merchant.`;
 
+/** LLM boundary for monthly insights. Receives ONLY the aggregated analytics
+ * payload (CLAUDE.md §9) and returns the raw parsed JSON; validation and
+ * retry live in lib/insights.ts so they're testable with this mocked. */
+export interface InsightsGenerator {
+  generate(payload: unknown): Promise<unknown>;
+}
+
+// Constrained prompt from the feature plan — keep verbatim.
+const INSIGHTS_PROMPT = `Generate 3 concise spending observations for the month. Focus on:
+- notable category changes
+- largest merchants
+- unusual spending concentrations
+- month-over-month trends
+Keep insights factual, neutral, and under 20 words each.
+Return JSON: { "insights": ["...", "...", "..."] }`;
+
+export function createOpenAIInsightsGenerator(
+  client?: OpenAI,
+  model: string = process.env.OPENAI_MODEL ?? "gpt-4o-mini"
+): InsightsGenerator {
+  return {
+    async generate(payload: unknown): Promise<unknown> {
+      const openai = client ?? new OpenAI();
+      const completion = await openai.chat.completions.create({
+        model,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: INSIGHTS_PROMPT },
+          { role: "user", content: JSON.stringify(payload) },
+        ],
+      });
+      return JSON.parse(completion.choices[0]?.message?.content ?? "{}");
+    },
+  };
+}
+
 export function createOpenAICategorizer(
   client?: OpenAI,
   model: string = process.env.OPENAI_MODEL ?? "gpt-4o-mini"

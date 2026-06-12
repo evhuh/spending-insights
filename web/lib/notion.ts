@@ -16,9 +16,16 @@ export interface MonthlyReport {
   averageDailySpend: number;
   topCategories: CategorySpend[];
   topMerchants: MerchantSpend[];
+  // Stored insights, reused verbatim (CLAUDE.md §9). null → the report OMITS
+  // the Insights section; the sync never generates them.
+  insights: string[] | null;
 }
 
-export function buildMonthlyReport(month: string, analytics: Analytics): MonthlyReport {
+export function buildMonthlyReport(
+  month: string,
+  analytics: Analytics,
+  insights: string[] | null = null
+): MonthlyReport {
   return {
     month,
     totalSpend: analytics.totalSpend,
@@ -26,6 +33,7 @@ export function buildMonthlyReport(month: string, analytics: Analytics): Monthly
     averageDailySpend: analytics.averageDailySpend,
     topCategories: analytics.spendByCategory.slice(0, TOP_LIST_LIMIT),
     topMerchants: analytics.topMerchants.slice(0, TOP_LIST_LIMIT),
+    insights,
   };
 }
 
@@ -68,6 +76,10 @@ export function reportBodyBlocks(report: MonthlyReport): NotionBlock[] {
     ...report.topMerchants.map((m) =>
       bullet(`${m.merchant} — ${formatUsd(m.total)} (${m.count}×)`)
     ),
+    // Insights go after Top Merchants; omitted entirely when none are stored.
+    ...(report.insights !== null && report.insights.length > 0
+      ? [heading("Insights"), ...report.insights.map(bullet)]
+      : []),
   ];
 }
 

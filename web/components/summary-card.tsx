@@ -8,7 +8,7 @@ export function SummaryCard({ analytics }: { analytics: Analytics }) {
   return (
     <section
       aria-label="Summary"
-      className="flex flex-wrap items-center gap-x-12 gap-y-4 rounded-2xl border border-cream-200 bg-white px-6 py-4 shadow-sm"
+      className="flex flex-wrap items-center gap-x-12 gap-y-4 rounded-xl border border-cream-200 bg-white px-6 py-4 shadow-sm"
     >
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">
@@ -18,7 +18,7 @@ export function SummaryCard({ analytics }: { analytics: Analytics }) {
           {formatUsd(analytics.totalSpend)}
         </p>
       </div>
-      <div className="w-full max-w-xs">
+      <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">
           Top Merchants
         </p>

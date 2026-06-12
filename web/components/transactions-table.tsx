@@ -11,6 +11,7 @@ import { useMemo } from "react";
 
 import { CategoryPicker } from "@/components/category-picker";
 import { EditableCell } from "@/components/editable-cell";
+import { SourceBadge } from "@/components/source-badge";
 import { formatDate, formatUsd } from "@/lib/format";
 import type { TransactionJson } from "@/lib/transactions";
 
@@ -36,7 +37,9 @@ export function TransactionsTable({
             <EditableCell
               type="date"
               value={row.original.date}
-              display={formatDate(row.original.date)}
+              display={
+                <span className="whitespace-nowrap">{formatDate(row.original.date)}</span>
+              }
               label={`date for ${row.original.merchant}`}
               onCommit={(v) => onEdit(row.original.id, "date", v)}
             />
@@ -55,13 +58,18 @@ export function TransactionsTable({
         columnHelper.accessor("category", {
           header: "Category",
           cell: ({ row }) => (
-            <CategoryPicker
-              value={row.original.category}
-              merchant={row.original.merchant}
-              colorFor={colorFor}
-              onSetColor={onSetColor}
-              onCommit={(v) => onEdit(row.original.id, "category", v)}
-            />
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <CategoryPicker
+                  value={row.original.category}
+                  merchant={row.original.merchant}
+                  colorFor={colorFor}
+                  onSetColor={onSetColor}
+                  onCommit={(v) => onEdit(row.original.id, "category", v)}
+                />
+              </div>
+              <SourceBadge source={row.original.categorySource} />
+            </div>
           ),
         }),
         columnHelper.accessor("amount", {
@@ -103,9 +111,11 @@ export function TransactionsTable({
   return (
     <section
       aria-label="Transactions"
-      className="overflow-hidden rounded-2xl border border-cream-200 bg-white shadow-sm"
+      className="relative h-full min-h-72 overflow-hidden rounded-xl border border-cream-200 bg-white shadow-sm"
     >
-      <div className="max-h-[calc(100dvh-23rem)] min-h-72 overflow-y-auto">
+      {/* Absolute fill so the rows don't size the grid row — the pie's height
+          drives it, and the table scrolls within that. */}
+      <div className="absolute inset-0 overflow-y-auto">
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-cream-100 text-left text-xs font-semibold uppercase tracking-wider text-stone-500">
             {table.getHeaderGroups().map((headerGroup) => (

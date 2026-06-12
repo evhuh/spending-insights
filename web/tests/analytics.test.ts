@@ -144,4 +144,16 @@ describe.skipIf(!db.available)("GET /api/analytics", () => {
   it("rejects a malformed month", async () => {
     expect((await get("?month=99-07")).status).toBe(400);
   });
+
+  it("aggregates a whole year with the year filter", async () => {
+    const response = await get("?year=1999");
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.totalSpend).toBe(30.5);
+    expect(body.transactionCount).toBe(3);
+  });
+
+  it("rejects a malformed year", async () => {
+    expect((await get("?year=99")).status).toBe(400);
+  });
 });

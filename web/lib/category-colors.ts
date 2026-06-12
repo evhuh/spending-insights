@@ -30,8 +30,8 @@ export function useCategoryColors() {
 
   useEffect(() => {
     // Load after mount so server and client render the same initial markup.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOverrides(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}"));
     } catch {
       // corrupted storage — fall back to defaults

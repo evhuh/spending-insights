@@ -17,7 +17,7 @@ export function CategoryPie({
   return (
     <section
       aria-label="Spending by category"
-      className="rounded-2xl border border-cream-200 bg-white p-5 shadow-sm"
+      className="rounded-xl border border-cream-200 bg-white p-5 shadow-sm"
     >
       <h2 className="text-sm font-semibold text-stone-900">Spending by category</h2>
       {data.length === 0 ? (
@@ -40,7 +40,11 @@ export function CategoryPie({
                     <Cell key={entry.category} fill={colorFor(entry.category)} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => formatUsd(Number(value))} />
+                <Tooltip
+                  // Match the table/body text color instead of the slice color.
+                  itemStyle={{ color: "#2a211c" }}
+                  formatter={(value) => formatUsd(Number(value))}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>

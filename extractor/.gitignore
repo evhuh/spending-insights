@@ -1,0 +1,10 @@
+# env files — ignore real secrets, but track the example.
+.env*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/

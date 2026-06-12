@@ -1,0 +1,10 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="8" fill="#2a211c"/>
+  <g transform="rotate(-90 16 16)" fill="none" stroke-width="5">
+    <!-- Donut segments in the app's cream → peach → blush palette -->
+    <circle cx="16" cy="16" r="9" stroke="#b35273" stroke-dasharray="25.45 31.10" stroke-dashoffset="0"/>
+    <circle cx="16" cy="16" r="9" stroke="#f2bacd" stroke-dasharray="14.14 42.41" stroke-dashoffset="-25.45"/>
+    <circle cx="16" cy="16" r="9" stroke="#f9dfd2" stroke-dasharray="10.18 46.37" stroke-dashoffset="-39.59"/>
+    <circle cx="16" cy="16" r="9" stroke="#f0e2b8" stroke-dasharray="6.79 49.76" stroke-dashoffset="-49.77"/>
+  </g>
+</svg>

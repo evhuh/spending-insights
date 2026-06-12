@@ -37,6 +37,18 @@ model MerchantRule {
   @@map("merchant_rules")
 }
 
+// One row per month; the ONLY schema addition for the insights feature
+// (CLAUDE.md §9 — the transactions table is untouched).
+model MonthlyInsight {
+  id                   String   @id @default(uuid()) @db.Uuid
+  month                String   @unique // YYYY-MM
+  insights             Json // array of 3 strings
+  analyticsFingerprint String   @map("analytics_fingerprint")
+  generatedAt          DateTime @default(now()) @map("generated_at")
+
+  @@map("monthly_insights")
+}
+
 model ImportBatch {
   id               String   @id @default(uuid()) @db.Uuid
   fileName         String   @map("file_name")
